@@ -66,7 +66,7 @@ merges without a pre-existing scored candidate ID + an explicit decision +
 a named reviewer) combined with the agent's own reasoning about evidence
 strength, arriving independently at "don't merge these." That is the
 concrete difference between building for human developers and building for
-AI agents the JD asks for: a human UI could let someone click "merge" on
+AI agents: a human UI could let someone click "merge" on
 a hunch; this MCP server's tool boundaries make a hunch-based merge
 structurally unavailable to the agent, while still giving a human reviewer
 every signal needed to decide for themselves.
