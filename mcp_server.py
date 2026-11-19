@@ -13,18 +13,18 @@ Tools exposed (see build spec section 2):
       decision every time; never auto-merges.
   get_audit_log(entity_id) -- READ-ONLY, full history for one NPI.
 
-This is the concrete design point for the "human vs agent developer"
-POV doc: an agent can call the three read-only tools autonomously, but
-approve_merge enforces a human-in-the-loop boundary in the server's
-design itself, not just in a policy document someone could forget to
-follow.
+Design point: an agent can call the three read-only tools freely, but
+every merge outcome needs a decision and a named reviewer, and it is
+logged against both providers. The server does not authenticate the
+reviewer, so the human gate depends on the client and the person using
+it. A production version needs authenticated reviewer identity.
 
 Usage (as an MCP server, launched by an MCP client like Claude Desktop):
     Configure your MCP client to run:
-    MONGODB_URI=mongodb+srv://... python3 mcp_server.py
+    MONGODB_URI=mongodb+srv://... MONGODB_DB=npi_demo python3 mcp_server.py
 
 Run standalone for a quick manual sanity check (no MCP client needed):
-    MONGODB_URI=mongodb+srv://... python3 mcp_server.py --selftest
+    MONGODB_URI=mongodb+srv://... MONGODB_DB=npi_demo python3 mcp_server.py --selftest
 """
 
 import datetime as dt
@@ -38,7 +38,9 @@ MONGODB_URI = os.environ.get("MONGODB_URI")
 if not MONGODB_URI:
     sys.exit("Set MONGODB_URI before starting the server.")
 
-DB_NAME = os.environ.get("MONGODB_DB", "production")
+DB_NAME = os.environ.get("MONGODB_DB")
+if not DB_NAME:
+    sys.exit("Set MONGODB_DB before starting the server (use a demo or test database for --selftest).")
 
 client = MongoClient(MONGODB_URI)
 db = client[DB_NAME]
@@ -192,9 +194,12 @@ def get_audit_log(entity_id: str) -> list:
 
 
 def _selftest():
-    """Quick manual check: exercises all 4 tools against the real DB
+    """Quick manual check: exercises all 4 tools against the configured DB
     without needing an MCP client. Run with: python3 mcp_server.py --selftest
     """
+    if not DB_NAME.endswith(("_demo", "_test")):
+        sys.exit("Refusing --selftest: it writes a decision. Set MONGODB_DB to a name ending in _demo or _test.")
+
     print("1. search_candidates(name='peterson'):")
     for doc in search_candidates(name="peterson"):
         print(" ", doc.get("npi"), doc.get("first_name"), doc.get("last_name"))
